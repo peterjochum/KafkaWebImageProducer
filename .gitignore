@@ -4,3 +4,7 @@
 
 # Local env file
 .env
+
+# Camera config (may contain sensitive URLs)
+cam_config.json
+sources.json

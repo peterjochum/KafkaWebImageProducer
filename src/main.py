@@ -1,13 +1,20 @@
+from datetime import datetime
 import time
+from json import dumps
+from urllib.error import URLError
+
 
 from kafka import KafkaProducer
 from os import environ
 from urllib.request import urlretrieve
 import logging
 
-env_bootstrap_server = "BOOTSTRAP_SERVERS"
-env_interval = "RETRIEVE_INTERVAL"
-env_image_url = "IMAGE_URL"
+from src.util.record import Record
+from util.cam_config import CamConfig
+
+env_name_bootstrap_server = "BOOTSTRAP_SERVERS"
+env_name_interval = "RETRIEVE_INTERVAL"
+
 default_retrieve_interval = 60
 
 def get_image(url):
@@ -20,27 +27,39 @@ def get_image(url):
     with open(img[0], "rb") as f:
         return f.read()
 
+
 def get_retrieve_interval() -> int:
-    retrieve_interval = environ.get(env_interval)
-    if not retrieve_interval:
-        retrieve_interval = default_retrieve_interval
-        logging.info(f"{env_interval} not set, using {default_retrieve_interval} seconds")
+    interval = environ.get(env_name_interval)
+    retrieve_interval = default_retrieve_interval
+    if not interval:
+        logging.info(f"{env_name_interval} not set, using {default_retrieve_interval} seconds")
     else:
-        logging.info(f"{env_interval} set, using {retrieve_interval} seconds")
+        retrieve_interval = int(interval)
+        logging.info(f"{env_name_interval} set, using {retrieve_interval} seconds")
     return retrieve_interval
 
 
 if __name__ == '__main__':
-    boostrap_server = environ.get(env_bootstrap_server)
+    logging.basicConfig(level=logging.INFO)
+    boostrap_server = environ.get(env_name_bootstrap_server)
     if not boostrap_server:
-        raise EnvironmentError(f"Set {env_bootstrap_server} in environment")
+        raise EnvironmentError(f"Set {env_name_bootstrap_server} in environment")
 
     retrieve_interval = get_retrieve_interval()
-    image_url = environ.get(env_image_url)
+    c = CamConfig.from_file("cam_config.json")
+    logging.info(f"Getting images from {c.url} ...")
     producer = KafkaProducer(bootstrap_servers=boostrap_server)
+    # value_serializer=lambda rec: dumps(rec.to_json()).encode('utf-8')
     while True:
-        img_data = get_image(image_url)
-        r = producer.send('trafficcam', img_data)
-        if r.succeeded():
-            logging.info(f"Wrote image with timestamp {r}")
+        try:
+            img_data = get_image(c.url)
+            new_record = Record(c.cam_id, img_data)
+            r = producer.send('trafficcam', new_record.to_json().encode("utf-8"), partition=c.cam_id)
+            with open(f"images/{datetime.now().timestamp()}_{c.cam_id}.jpg", 'wb') as f:
+                f.write(img_data)
+            while not r.is_done:
+                time.sleep(0.1)
+            logging.info(f"Wrote image with offset {r.value.offset} and timestamp {r.value.timestamp}")
+        except URLError:
+            logging.warning(f"Could not fetch image from URL {c.url} .. retrying in {retrieve_interval} seconds")
         time.sleep(retrieve_interval)
