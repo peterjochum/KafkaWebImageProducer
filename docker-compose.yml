@@ -1,9 +1,50 @@
-version: 3
+version: "3"
+
+
 
 services:
-  env_file:
-    - .env
   cam1:
-    image: kafkawebimageproducer:local
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      CAM_CONFIG_FILE: ${CAM_CONFIG_FILE}
+    image: ${KWIP_IMAGE}
     volumes:
-      - cam1_config.json:/app/${CAM_CONFIG_FILE}
+      - ./cam1_config.json:/app/${CAM_CONFIG_FILE}
+  cam2:
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      CAM_CONFIG_FILE: ${CAM_CONFIG_FILE}
+    image: ${KWIP_IMAGE}
+    volumes:
+      - ./cam2_config.json:/app/${CAM_CONFIG_FILE}
+  cam3:
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      CAM_CONFIG_FILE: ${CAM_CONFIG_FILE}
+    image: ${KWIP_IMAGE}
+    volumes:
+      - ./cam3_config.json:/app/${CAM_CONFIG_FILE}
+  cam4:
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      CAM_CONFIG_FILE: ${CAM_CONFIG_FILE}
+    image: ${KWIP_IMAGE}
+    volumes:
+      - ./cam4_config.json:/app/${CAM_CONFIG_FILE}
+  cam5:
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      CAM_CONFIG_FILE: ${CAM_CONFIG_FILE}
+    image: ${KWIP_IMAGE}
+    volumes:
+      - ./cam5_config.json:/app/${CAM_CONFIG_FILE}

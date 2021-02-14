@@ -15,7 +15,7 @@ class CamRecord:
         res["cam_id"] = self.cam_id
         res["desc"] = self.desc
         res["area"] = self.area
-        res["image_data"] = base64.b64encode(self.image_data).decode('ascii')
+        res["image_data"] = base64.b64encode(self.image_data).decode("ascii")
         json_data = json.dumps(res)
         return json_data
 
