@@ -1,21 +1,23 @@
-from datetime import datetime
+import logging
+import os
 import time
-from json import dumps
+from datetime import datetime
+from os import environ
 from urllib.error import URLError
-
+from urllib.request import urlretrieve
 
 from kafka import KafkaProducer
-from os import environ
-from urllib.request import urlretrieve
-import logging
 
-from src.util.cam_record import CamRecord
 from util.cam_config import CamConfig
+from util.cam_record import CamRecord
 
 env_name_bootstrap_server = "BOOTSTRAP_SERVERS"
 env_name_interval = "RETRIEVE_INTERVAL"
+env_name_config_file = "CAM_CONFIG_FILE"
+env_name_target_topic = "CAM_TOPIC"
 
 default_retrieve_interval = 60
+
 
 def get_image(url):
     """
@@ -45,8 +47,19 @@ if __name__ == '__main__':
     if not boostrap_server:
         raise EnvironmentError(f"Set {env_name_bootstrap_server} in environment")
 
+    cam_config_file = environ.get(env_name_config_file)
+    if not cam_config_file:
+        raise EnvironmentError(f"Set {env_name_config_file} in environment")
+
+    if not os.path.exists(cam_config_file):
+        raise EnvironmentError(f"File {cam_config_file} was not found")
+
+    topic = environ.get(env_name_target_topic)
+    if not topic:
+        raise EnvironmentError(f"Set a topic with {env_name_target_topic} variable")
+
     retrieve_interval = get_retrieve_interval()
-    c = CamConfig.from_file("cam_config.json")
+    c = CamConfig.from_file(cam_config_file)
     logging.info(f"Getting images from {c.url} ...")
     producer = KafkaProducer(bootstrap_servers=boostrap_server)
     # value_serializer=lambda rec: dumps(rec.to_json()).encode('utf-8')
@@ -54,7 +67,7 @@ if __name__ == '__main__':
         try:
             img_data = get_image(c.url)
             new_record = CamRecord(c.cam_id, c.desc, img_data, c.area)
-            r = producer.send('trafficcam', new_record.to_json().encode("utf-8"), partition=c.cam_id)
+            r = producer.send(topic, new_record.to_json().encode("utf-8"), partition=c.cam_id % 10)
             with open(f"images/{datetime.now().timestamp()}_{c.cam_id}.jpg", 'wb') as f:
                 f.write(img_data)
             while not r.is_done:

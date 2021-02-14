@@ -1,0 +1,9 @@
+version: 3
+
+services:
+  env_file:
+    - .env
+  cam1:
+    image: kafkawebimageproducer:local
+    volumes:
+      - cam1_config.json:/app/${CAM_CONFIG_FILE}

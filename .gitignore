@@ -6,5 +6,6 @@
 .env
 
 # Camera config (may contain sensitive URLs)
-cam_config.json
+*_config.json
+!*_config_example.json
 sources.json
