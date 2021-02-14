@@ -9,7 +9,7 @@ from os import environ
 from urllib.request import urlretrieve
 import logging
 
-from src.util.record import Record
+from src.util.cam_record import CamRecord
 from util.cam_config import CamConfig
 
 env_name_bootstrap_server = "BOOTSTRAP_SERVERS"
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     while True:
         try:
             img_data = get_image(c.url)
-            new_record = Record(c.cam_id, img_data)
+            new_record = CamRecord(c.cam_id, c.desc, img_data, c.area)
             r = producer.send('trafficcam', new_record.to_json().encode("utf-8"), partition=c.cam_id)
             with open(f"images/{datetime.now().timestamp()}_{c.cam_id}.jpg", 'wb') as f:
                 f.write(img_data)
